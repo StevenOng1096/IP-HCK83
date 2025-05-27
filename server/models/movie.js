@@ -25,7 +25,8 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.TEXT,
         allowNull: true,
       },
-      poster_path: {
+      coverUrl: {
+        // ← Changed from poster_path
         type: DataTypes.STRING,
         allowNull: true,
       },

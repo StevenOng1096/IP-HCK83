@@ -20,11 +20,15 @@ module.exports = {
           }
         );
 
-        const movieData = response.data.results.map((movie) => ({
+        const moviesWithOverview = response.data.results.filter(
+          (movie) => movie.overview && movie.overview.trim() !== ""
+        );
+
+        const movieData = moviesWithOverview.map((movie) => ({
           tmdb_id: movie.id, // TMDB's ID from their API
           title: movie.title,
           overview: movie.overview || "",
-          poster_path: movie.poster_path,
+          coverUrl: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
           genres: JSON.stringify(movie.genre_ids || []),
           ai_analysis: JSON.stringify({}),
           last_updated: new Date(),
