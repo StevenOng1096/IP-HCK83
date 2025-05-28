@@ -1,20 +1,23 @@
-// routes/movies.js
 const express = require("express");
+const MovieController = require("../controllers/MovieController");
+const { authenticateToken } = require("../middleware/auth");
 const router = express.Router();
 
-// Basic Movie Operations
-router.get("/" /* Get all movies with pagination */);
-router.get("/popular" /* Get popular movies */);
-router.get("/search" /* Search movies by title/overview */);
-router.get("/:id" /* Get movie details by local ID */);
-router.get("/tmdb/:tmdb_id" /* Get movie details by TMDB ID */);
+// Public routes (no authentication required)
+router.get("/", MovieController.getAllMovies); // Get all movies with filters
+router.get("/popular", MovieController.getPopularMovies); // Get popular movies
+router.get("/genres", MovieController.getGenres); // Get all genres
+router.get("/search", MovieController.searchMovies); // Search movies
 
-// Advanced Search & Discovery
-router.post(
-  "/smart-search",
-  authenticateToken /* AI-powered natural language search */
-);
-router.get("/genres" /* Get all available genres */);
-router.get("/genres/:genre" /* Get movies by genre */);
+// Protected routes (authentication required) - Must come before /:id route
+router.get(
+  "/recommendations",
+  authenticateToken,
+  MovieController.getRecommendations
+); // Get personalized recommendations
+
+// Dynamic routes (must come last)
+router.get("/:id", MovieController.getMovieById); // Get specific movie
+router.get("/:id/similar", MovieController.getSimilarMovies); // Get similar movies
 
 module.exports = router;
