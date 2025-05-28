@@ -1,17 +1,21 @@
 const express = require("express");
+const AuthController = require("../controllers/AuthController");
+const { authenticateToken } = require("../middleware/auth");
 const router = express.Router();
 
-// OAuth Routes
-// router.get("/google" /* Google OAuth initiate */);
-// router.get("/google/callback" /* Handle Google callback */);
-// router.get("/facebook" /* Facebook OAuth initiate */);
-// router.get("/facebook/callback" /* Handle Facebook callback */);
-// router.get("/discord" /* Discord OAuth initiate */);
-// router.get("/discord/callback" /* Handle Discord callback */);
+// Register route
+router.post("/register", AuthController.register);
 
-// // User Management
-// router.get("/profile", authenticateToken /* Get user profile */);
-// router.patch("/profile", authenticateToken /* Update user preferences */);
-// router.post("/logout", authenticateToken /* Logout user */);
+// Login route
+router.post("/login", AuthController.login);
+
+// Get user profile (protected route)
+router.get("/profile", authenticateToken, AuthController.getProfile);
+
+// Update user profile (protected route)
+router.patch("/profile", authenticateToken, AuthController.updateProfile);
+
+// Logout route (mainly for client-side token removal)
+router.post("/logout", authenticateToken, AuthController.logout);
 
 module.exports = router;
