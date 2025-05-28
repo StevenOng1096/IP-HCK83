@@ -1,3 +1,4 @@
+const { generateContent } = require("../lib/gemini.api");
 const { Movie, Genre, Watchlist, User } = require("../models");
 const { Op, Sequelize } = require("sequelize");
 
@@ -577,6 +578,66 @@ class MovieController {
       res.status(500).json({
         success: false,
         message: "Failed to fetch recommendations",
+        error: error.message,
+      });
+    }
+  }
+
+  static async getAIMovieRecommendations(req, res) {
+    try {
+      const userGenres = req.user.favorite_genres || [];
+
+      let userGenreNames = [];
+      if (userGenres.length > 0) {
+        const genres = await Genre.findAll({
+          where: {
+            id: {
+              [Op.in]: userGenres,
+            },
+          },
+          attributes: ["id", "name"],
+        });
+
+        userGenreNames = genres.map((genre) => genre.name); // Convert to array of strings
+      }
+
+      const dataMovies = await Movie.findAll({
+        attributes: ["id", "title", "overview", "coverUrl", "release_date"],
+      });
+
+      const prompt = `
+      I want you to recommend the user with top 3 movies
+
+      from the list below:
+      ${dataMovies
+        .map((movie) => `- ${movie.title} (ID: ${movie.id})`)
+        .join("\n")}
+
+      based on the following criteria:
+      - Highly rated
+      - Genre: ${userGenreNames.join(", ")}
+      `;
+
+      const generation = await generateContent(prompt);
+
+      const parsedOutput = JSON.parse(generation);
+
+      console.log("Generation:", parsedOutput);
+
+      const movies = dataMovies.filter((movie) =>
+        parsedOutput.includes(movie.id)
+      );
+
+      res.status(200).json({
+        message: "Hello from Gemini API",
+        generation: parsedOutput,
+        movies,
+      });
+    } catch (error) {
+      console.error("Error generating AI movie recommendations:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to generate AI movie recommendations",
         error: error.message,
       });
     }

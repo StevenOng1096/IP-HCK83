@@ -1,7 +1,10 @@
+// helpers/gemini.api.js
 const { GoogleGenAI, Type } = require("@google/genai");
 require("dotenv").config();
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const GOOGLE_GENAI_API_KEY = process.env.GEMINI_API_KEY;
+
+const ai = new GoogleGenAI({ apiKey: GOOGLE_GENAI_API_KEY });
 
 async function generateContent(prompt) {
   try {
@@ -11,15 +14,6 @@ async function generateContent(prompt) {
       config: {
         responseMimeType: "application/json",
         responseSchema: {
-          // type: Type.OBJECT,
-          // properties: {
-          //   title: { type: Type.STRING },
-          //   synopsis: { type: Type.STRING },
-          //   genreId: { type: Type.INTEGER },
-          //   rating: { type: Type.INTEGER },
-          //   trailerUrl: { type: Type.STRING },
-          //   imgUrl: { type: Type.STRING },
-          // },
           type: Type.ARRAY,
           items: {
             type: Type.INTEGER,

@@ -2,18 +2,17 @@
 const router = require("express").Router();
 const authRoutes = require("./auth");
 const movieRoutes = require("./movies");
-// const recommendationRoutes = require("./recommendations");
-// const watchlistRoutes = require("./watchlist");
-// const userRoutes = require("./users");
+const watchlistRoutes = require("./watchlist");
 
 // Mount routes
 router.use("/auth", authRoutes);
 router.use("/movies", movieRoutes);
-// router.use("/recommendations", recommendationRoutes);
-// router.use("/watchlist", watchlistRoutes);
-// router.use("/users", userRoutes);
+router.use("/watchlist", watchlistRoutes);
 router.get("/", (req, res) => {
   res.send("Welcome to the Movie Recommendation API!");
 });
 
 module.exports = router;
+
+// router.use("/recommendations", recommendationRoutes); // ❌ Not needed - use /movies/recommendations
+// router.use("/users", userRoutes); // ❌ Not needed - use /auth routes

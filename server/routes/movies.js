@@ -16,6 +16,12 @@ router.get(
   MovieController.getRecommendations
 ); // Get personalized recommendations
 
+router.get(
+  "/recommendations/ai",
+  authenticateToken,
+  MovieController.getAIMovieRecommendations
+);
+
 // Dynamic routes (must come last)
 router.get("/:id", MovieController.getMovieById); // Get specific movie
 router.get("/:id/similar", MovieController.getSimilarMovies); // Get similar movies
