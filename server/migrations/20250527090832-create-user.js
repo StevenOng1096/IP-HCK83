@@ -4,41 +4,40 @@ module.exports = {
   async up(queryInterface, Sequelize) {
     await queryInterface.createTable("Users", {
       id: {
-        allowNull: false,
-        autoIncrement: true,
-        primaryKey: true,
         type: Sequelize.INTEGER,
+        primaryKey: true,
+        autoIncrement: true,
+        allowNull: false,
       },
       username: {
         type: Sequelize.STRING,
+        allowNull: false,
+        unique: true,
       },
       email: {
         type: Sequelize.STRING,
+        allowNull: false,
+        unique: true,
       },
-      oauth_provider: {
+      password: {
         type: Sequelize.STRING,
-        allowNull: true,
-      },
-      oauth_id: {
-        type: Sequelize.STRING,
-        allowNull: true,
+        allowNull: false,
       },
       favorite_genres: {
-        type: Sequelize.JSON,
+        type: Sequelize.ARRAY(Sequelize.INTEGER),
+        defaultValue: [],
+        allowNull: true,
       },
       createdAt: {
-        allowNull: false,
         type: Sequelize.DATE,
+        allowNull: false,
+        defaultValue: Sequelize.NOW,
       },
       updatedAt: {
-        allowNull: false,
         type: Sequelize.DATE,
+        allowNull: false,
+        defaultValue: Sequelize.NOW,
       },
-    });
-
-    await queryInterface.addIndex("Users", ["oauth_provider", "oauth_id"], {
-      unique: true,
-      name: "users_oauth_unique",
     });
   },
   async down(queryInterface, Sequelize) {

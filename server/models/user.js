@@ -4,7 +4,7 @@ module.exports = (sequelize, DataTypes) => {
   class User extends Model {
     static associate(models) {
       User.hasMany(models.Watchlist, {
-        foreignKey: "user_id",
+        foreignKey: "UserId",
         as: "watchlists",
       });
     }
@@ -14,31 +14,29 @@ module.exports = (sequelize, DataTypes) => {
       username: {
         type: DataTypes.STRING,
         allowNull: false,
+        unique: true,
       },
       email: {
         type: DataTypes.STRING,
         allowNull: false,
+        unique: true,
         validate: {
           isEmail: true,
         },
       },
-      oauth_provider: {
-        type: DataTypes.ENUM("google", "facebook", "discord"),
-        allowNull: false,
-      },
-      oauth_id: {
+      password: {
         type: DataTypes.STRING,
         allowNull: false,
       },
       favorite_genres: {
-        type: DataTypes.JSON,
+        type: DataTypes.ARRAY(DataTypes.INTEGER),
         defaultValue: [],
+        allowNull: true,
       },
     },
     {
       sequelize,
       modelName: "User",
-      underscored: true,
     }
   );
   return User;

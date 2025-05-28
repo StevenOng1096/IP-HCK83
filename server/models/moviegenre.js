@@ -1,30 +1,20 @@
 "use strict";
 const { Model } = require("sequelize");
 module.exports = (sequelize, DataTypes) => {
-  class Watchlist extends Model {
+  class MovieGenre extends Model {
     static associate(models) {
-      Watchlist.belongsTo(models.User, {
-        foreignKey: "UserId",
-        as: "user",
-      });
-      Watchlist.belongsTo(models.Movie, {
+      MovieGenre.belongsTo(models.Movie, {
         foreignKey: "MovieId",
         as: "movie",
       });
+      MovieGenre.belongsTo(models.Genre, {
+        foreignKey: "GenreId",
+        as: "genre",
+      });
     }
   }
-  Watchlist.init(
+  MovieGenre.init(
     {
-      UserId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-          model: "Users",
-          key: "id",
-        },
-        onUpdate: "CASCADE",
-        onDelete: "CASCADE",
-      },
       MovieId: {
         type: DataTypes.INTEGER,
         allowNull: false,
@@ -35,16 +25,21 @@ module.exports = (sequelize, DataTypes) => {
         onUpdate: "CASCADE",
         onDelete: "CASCADE",
       },
-      status: {
-        type: DataTypes.ENUM("want", "watched", "favorite"),
+      GenreId: {
+        type: DataTypes.INTEGER,
         allowNull: false,
-        defaultValue: "want",
+        references: {
+          model: "Genres",
+          key: "id",
+        },
+        onUpdate: "CASCADE",
+        onDelete: "CASCADE",
       },
     },
     {
       sequelize,
-      modelName: "Watchlist",
+      modelName: "MovieGenre",
     }
   );
-  return Watchlist;
+  return MovieGenre;
 };
