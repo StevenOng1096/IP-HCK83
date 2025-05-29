@@ -43,6 +43,9 @@ export default function HomePage() {
       // Add search query if present
       if (searchQuery) {
         url += `&search=${encodeURIComponent(searchQuery)}`;
+      } else {
+        // When not searching, sort by release_date descending to show latest movies first
+        url += `&sortBy=release_date&sortOrder=desc`;
       }
 
       const { data } = await axios.get(url);

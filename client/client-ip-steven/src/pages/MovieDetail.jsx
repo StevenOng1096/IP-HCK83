@@ -173,7 +173,7 @@ const MovieDetail = () => {
                 <h6 className="text-muted mb-2">Genres:</h6>
                 <div>
                   {movie.genres && movie.genres.length > 0 ? (
-                    movie.genres.map((genre, index) => (
+                    movie.genres.map((genre) => (
                       <span
                         key={genre.id}
                         className="badge bg-primary me-2 mb-1"

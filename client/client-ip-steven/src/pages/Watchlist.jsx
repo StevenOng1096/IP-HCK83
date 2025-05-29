@@ -1,20 +1,21 @@
-import React, { useState, useEffect, useCallback } from "react";
-import axios from "../lib/http";
+import React, { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import Swal from "sweetalert2";
 import { useNavigate } from "react-router";
+import {
+  fetchWatchlist,
+  updateWatchlistStatus,
+  removeFromWatchlist,
+  setCurrentPage,
+} from "../redux/watchlistSlice";
 
-const WatchlistCard = ({ movie, onWatched, onFavorite, onRemove }) => {
+const WatchlistCard = ({ movie, onRemove, onWatched, onFavorite }) => {
   const navigate = useNavigate();
-
-  // Handle both direct movie object and nested movie object
   const movieData = movie.movie || movie;
   const posterUrl = movieData.coverUrl;
   const releaseYear = movieData.release_date
-    ? new Date(movieData.release_date).getFullYear()
+    ? new Date(movie.release_date).getFullYear()
     : "Unknown";
-  const rating = movieData.vote_average
-    ? movieData.vote_average.toFixed(1)
-    : "N/A";
   const movieGenres = movieData.genres || movieData.Genres || [];
   const genreNames = movieGenres.map((genre) => genre.name).join(", ");
 
@@ -22,9 +23,52 @@ const WatchlistCard = ({ movie, onWatched, onFavorite, onRemove }) => {
     navigate(`/moviedetails/${movieData.id}`);
   };
 
+  // Get status display info
+  const getStatusInfo = (status) => {
+    switch (status) {
+      case "want":
+        return {
+          badge: "badge bg-primary",
+          text: "Want to Watch",
+          icon: "bi bi-bookmark",
+        };
+      case "watched":
+        return {
+          badge: "badge bg-success",
+          text: "Watched",
+          icon: "bi bi-check-circle-fill",
+        };
+      case "favorite":
+        return {
+          badge: "badge bg-warning text-dark",
+          text: "Favorite",
+          icon: "bi bi-heart-fill",
+        };
+      default:
+        return {
+          badge: "badge bg-secondary",
+          text: "Unknown",
+          icon: "bi bi-question-circle",
+        };
+    }
+  };
+
+  const statusInfo = getStatusInfo(movie.status);
+
   return (
     <div className="col-lg-3 col-md-4 col-sm-6 mb-4">
       <div className="card h-100 shadow-sm movie-card">
+        {/* Status Badge */}
+        <div
+          className="position-absolute top-0 end-0 m-2"
+          style={{ zIndex: 1 }}
+        >
+          <span className={statusInfo.badge}>
+            <i className={`${statusInfo.icon} me-1`}></i>
+            {statusInfo.text}
+          </span>
+        </div>
+
         <img
           src={posterUrl}
           className="card-img-top"
@@ -44,12 +88,6 @@ const WatchlistCard = ({ movie, onWatched, onFavorite, onRemove }) => {
               <i className="bi bi-calendar me-1"></i>
               Released: {releaseYear}
             </p>
-            {/* <div className="d-flex justify-content-between align-items-center mb-2">
-              <span className="badge bg-warning text-dark">
-                <i className="bi bi-star-fill me-1"></i>
-                {rating}
-              </span>
-            </div> */}
             {movieGenres.length > 0 && (
               <div className="mb-2">
                 <small className="text-muted d-block">
@@ -69,27 +107,38 @@ const WatchlistCard = ({ movie, onWatched, onFavorite, onRemove }) => {
               <i className="bi bi-info-circle me-1"></i>
               View Details
             </button>
+
+            {/* Action Buttons Row */}
             <div className="d-flex gap-1">
               <button
-                className="btn btn-success btn-sm flex-fill"
-                onClick={() => onWatched(movieData.id)}
-                title="Mark as watched"
+                className={`btn btn-sm flex-fill ${
+                  movie.status === "watched"
+                    ? "btn-success"
+                    : "btn-outline-success"
+                }`}
+                onClick={() => onWatched(movie.id)}
+                title="Mark as Watched"
               >
                 <i className="bi bi-check-circle me-1"></i>
                 Watched
               </button>
               <button
-                className="btn btn-warning btn-sm flex-fill"
-                onClick={() => onFavorite(movieData.id)}
-                title="Mark as favorite"
+                className={`btn btn-sm flex-fill ${
+                  movie.status === "favorite"
+                    ? "btn-warning"
+                    : "btn-outline-warning"
+                }`}
+                onClick={() => onFavorite(movie.id)}
+                title="Mark as Favorite"
               >
-                <i className="bi bi-heart-fill me-1"></i>
+                <i className="bi bi-heart me-1"></i>
                 Favorite
               </button>
             </div>
+
             <button
               className="btn btn-outline-danger btn-sm"
-              onClick={() => onRemove(movie.id)} // Use movie.id (watchlist entry ID) instead of movieData.id (movie ID)
+              onClick={() => onRemove(movie.id)}
               title="Remove from watchlist"
             >
               <i className="bi bi-trash me-1"></i>
@@ -103,77 +152,34 @@ const WatchlistCard = ({ movie, onWatched, onFavorite, onRemove }) => {
 };
 
 const Watchlist = () => {
-  const [watchlist, setWatchlist] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [pagination, setPagination] = useState({
-    currentPage: 1,
-    totalPages: 0,
-    totalItems: 0,
-    hasNextPage: false,
-    hasPrevPage: false,
-  });
+  const dispatch = useDispatch();
+  const {
+    items: watchlist,
+    loading,
+    error,
+    pagination,
+  } = useSelector((state) => state.watchlist);
+  const { currentPage, totalPages } = pagination;
 
-  const fetchWatchlist = useCallback(async () => {
-    try {
-      setLoading(true);
-      const { data } = await axios.get(
-        `/watchlist?page=${currentPage}&limit=20`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-          },
-        }
-      );
-
-      if (data.success) {
-        // Handle different possible response structures
-        const watchlistData =
-          data.data?.watchlist || data.data || data.watchlist || [];
-        setWatchlist(watchlistData);
-
-        // Handle pagination
-        const paginationData = data.data?.pagination ||
-          data.pagination || {
-            currentPage: 1,
-            totalPages: 1,
-            totalItems: watchlistData.length,
-            hasNextPage: false,
-            hasPrevPage: false,
-          };
-
-        setPagination(paginationData);
-        setTotalPages(paginationData.totalPages || 1);
-      } else {
-        console.error("API returned success: false", data);
-        setWatchlist([]);
-      }
-    } catch (error) {
-      console.error("Error fetching watchlist:", error);
-      console.error("Error response:", error.response?.data);
-
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: error.response?.data?.message || "Failed to fetch watchlist",
-      });
-
-      setWatchlist([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [currentPage]);
+  // Filter state
+  const [statusFilter, setStatusFilter] = useState("all");
 
   useEffect(() => {
-    fetchWatchlist();
-  }, [fetchWatchlist]);
+    dispatch(fetchWatchlist({ page: currentPage, limit: 20 }));
+  }, [dispatch, currentPage]);
 
-  const handleWatched = async (movieId) => {
+  // Filter watchlist based on status
+  const filteredWatchlist =
+    statusFilter === "all"
+      ? watchlist
+      : watchlist.filter((movie) => movie.status === statusFilter);
+
+  // Handle watched button click
+  const handleWatched = async (watchlistId) => {
     try {
       const result = await Swal.fire({
         title: "Mark as Watched?",
-        text: "This will mark the movie as watched in your watchlist.",
+        text: "This will update the movie status to watched.",
         icon: "question",
         showCancelButton: true,
         confirmButtonColor: "#28a745",
@@ -182,60 +188,63 @@ const Watchlist = () => {
       });
 
       if (result.isConfirmed) {
-        // You can implement the watched functionality here
-        // For now, just show a success message
+        await dispatch(
+          updateWatchlistStatus({ watchlistId, status: "watched" })
+        ).unwrap();
+
         Swal.fire({
           icon: "success",
           title: "Marked as Watched!",
-          text: "Movie has been marked as watched.",
+          text: "Movie status has been updated to watched.",
           timer: 2000,
           showConfirmButton: false,
         });
       }
     } catch (error) {
-      console.error("Error marking as watched:", error);
       Swal.fire({
         icon: "error",
         title: "Error",
-        text: "Failed to mark movie as watched",
+        text: error || "Failed to update movie status",
       });
     }
   };
 
-  const handleFavorite = async (movieId) => {
+  // Handle favorite button click
+  const handleFavorite = async (watchlistId) => {
     try {
       const result = await Swal.fire({
         title: "Mark as Favorite?",
-        text: "This will add the movie to your favorites.",
+        text: "This will update the movie status to favorite.",
         icon: "question",
         showCancelButton: true,
         confirmButtonColor: "#ffc107",
         cancelButtonColor: "#6c757d",
-        confirmButtonText: "Yes, add to favorites!",
+        confirmButtonText: "Yes, mark as favorite!",
       });
 
       if (result.isConfirmed) {
-        // You can implement the favorite functionality here
-        // For now, just show a success message
+        await dispatch(
+          updateWatchlistStatus({ watchlistId, status: "favorite" })
+        ).unwrap();
+
         Swal.fire({
           icon: "success",
-          title: "Added to Favorites!",
-          text: "Movie has been added to your favorites.",
+          title: "Marked as Favorite!",
+          text: "Movie status has been updated to favorite.",
           timer: 2000,
           showConfirmButton: false,
         });
       }
     } catch (error) {
-      console.error("Error adding to favorites:", error);
       Swal.fire({
         icon: "error",
         title: "Error",
-        text: "Failed to add movie to favorites",
+        text: error || "Failed to update movie status",
       });
     }
   };
 
-  const handleRemove = async (movieId) => {
+  const handleRemove = async (watchlistId) => {
     try {
       const result = await Swal.fire({
         title: "Remove from Watchlist?",
@@ -248,14 +257,7 @@ const Watchlist = () => {
       });
 
       if (result.isConfirmed) {
-        await axios.delete(`/watchlist/${movieId}`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-          },
-        });
-
-        // Refresh the watchlist
-        fetchWatchlist();
+        await dispatch(removeFromWatchlist(watchlistId)).unwrap();
 
         Swal.fire({
           icon: "success",
@@ -266,22 +268,23 @@ const Watchlist = () => {
         });
       }
     } catch (error) {
-      console.error("Error removing from watchlist:", error);
       Swal.fire({
         icon: "error",
         title: "Error",
-        text:
-          error.response?.data?.message ||
-          "Failed to remove movie from watchlist",
+        text: error || "Failed to remove movie from watchlist",
       });
     }
   };
 
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
-      setCurrentPage(newPage);
+      dispatch(setCurrentPage(newPage));
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
+  };
+
+  const handleRefresh = () => {
+    dispatch(fetchWatchlist({ page: currentPage, limit: 20 }));
   };
 
   return (
@@ -296,14 +299,18 @@ const Watchlist = () => {
                 My Watchlist
               </h1>
               <p className="text-muted mb-0">
-                {watchlist.length > 0
-                  ? `Showing ${watchlist.length} movies in your watchlist`
+                {filteredWatchlist.length > 0
+                  ? `Showing ${filteredWatchlist.length} movies ${
+                      statusFilter !== "all"
+                        ? `with status: ${statusFilter}`
+                        : "in your watchlist"
+                    }`
                   : "Your watchlist is empty"}
               </p>
             </div>
             <button
               className="btn btn-outline-primary"
-              onClick={fetchWatchlist}
+              onClick={handleRefresh}
               disabled={loading}
             >
               {loading ? (
@@ -325,6 +332,68 @@ const Watchlist = () => {
         </div>
       </div>
 
+      {/* Status Filter Toggle */}
+      <div className="row mb-4">
+        <div className="col-12">
+          <div className="d-flex flex-wrap gap-2 justify-content-center">
+            <button
+              className={`btn ${
+                statusFilter === "all" ? "btn-primary" : "btn-outline-primary"
+              }`}
+              onClick={() => setStatusFilter("all")}
+            >
+              <i className="bi bi-list me-1"></i>
+              All ({watchlist.length})
+            </button>
+            <button
+              className={`btn ${
+                statusFilter === "want" ? "btn-primary" : "btn-outline-primary"
+              }`}
+              onClick={() => setStatusFilter("want")}
+            >
+              <i className="bi bi-bookmark me-1"></i>
+              Want to Watch (
+              {watchlist.filter((m) => m.status === "want").length})
+            </button>
+            <button
+              className={`btn ${
+                statusFilter === "watched"
+                  ? "btn-success"
+                  : "btn-outline-success"
+              }`}
+              onClick={() => setStatusFilter("watched")}
+            >
+              <i className="bi bi-check-circle me-1"></i>
+              Watched ({watchlist.filter((m) => m.status === "watched").length})
+            </button>
+            <button
+              className={`btn ${
+                statusFilter === "favorite"
+                  ? "btn-warning"
+                  : "btn-outline-warning"
+              }`}
+              onClick={() => setStatusFilter("favorite")}
+            >
+              <i className="bi bi-heart me-1"></i>
+              Favorite (
+              {watchlist.filter((m) => m.status === "favorite").length})
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="row mb-3">
+          <div className="col-12">
+            <div className="alert alert-danger" role="alert">
+              <i className="bi bi-exclamation-triangle me-2"></i>
+              {error}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Loading Spinner */}
       {loading && (
         <div className="row">
@@ -340,11 +409,11 @@ const Watchlist = () => {
       {/* Watchlist Content */}
       {!loading && (
         <>
-          {watchlist.length > 0 ? (
+          {filteredWatchlist.length > 0 ? (
             <>
               {/* Movies Grid */}
               <div className="row">
-                {watchlist.map((item, index) => (
+                {filteredWatchlist.map((item, index) => (
                   <WatchlistCard
                     key={item.id || item.Movie?.id || index}
                     movie={item}
@@ -431,11 +500,25 @@ const Watchlist = () => {
             <div className="row">
               <div className="col-12 text-center py-5">
                 <i className="bi bi-bookmark-x display-1 text-muted mb-3"></i>
-                <h3 className="text-muted mb-3">Your watchlist is empty</h3>
+                <h3 className="text-muted mb-3">
+                  {statusFilter === "all"
+                    ? "Your watchlist is empty"
+                    : `No movies with status: ${statusFilter}`}
+                </h3>
                 <p className="text-muted mb-4">
-                  Start adding movies to your watchlist to keep track of what
-                  you want to watch!
+                  {statusFilter === "all"
+                    ? "Start adding movies to your watchlist to keep track of what you want to watch!"
+                    : `Try selecting a different status filter or add more movies to your watchlist.`}
                 </p>
+                {statusFilter !== "all" ? (
+                  <button
+                    className="btn btn-primary me-2"
+                    onClick={() => setStatusFilter("all")}
+                  >
+                    <i className="bi bi-list me-1"></i>
+                    Show All Movies
+                  </button>
+                ) : null}
                 <a href="/" className="btn btn-primary">
                   <i className="bi bi-film me-1"></i>
                   Browse Movies
