@@ -225,6 +225,60 @@ class AuthController {
       });
     }
   }
+  static async googleLogin(req, res) {
+    try {
+      const { id_token } = req.body;
+
+      if (!id_token) {
+        return res.status(400).json({
+          success: false,
+          message: "Google ID token is required",
+        });
+      }
+
+      const ticket = await client.verifyIdToken({
+        idToken: id_token,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+
+      const payload = ticket.getPayload();
+      const { email, name, sub: googleId } = payload;
+
+      // Check if user exists
+      let user = await User.findOne({ where: { email } });
+
+      if (!user) {
+        // Create new user with Google data
+        user = await User.create({
+          username: name,
+          email,
+          password: Math.random().toString(36).slice(-8), // Random password since it's Google auth
+          favorite_genres: [],
+        });
+      }
+
+      // Generate token
+      const token = generateToken(user);
+
+      res.status(200).json({
+        success: true,
+        message: "Google login successful",
+        data: {
+          user: user.toJSON(),
+          token,
+        },
+        access_token: token, // For backward compatibility
+        email: user.email,
+      });
+    } catch (error) {
+      console.error("Google login error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Google authentication failed",
+        error: error.message,
+      });
+    }
+  }
 }
 
 module.exports = AuthController;

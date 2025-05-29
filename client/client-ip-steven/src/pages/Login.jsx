@@ -1,4 +1,5 @@
 import axios from "../lib/http";
+import { useEffect } from "react";
 import { useState } from "react";
 import { useNavigate, Link } from "react-router";
 import Swal from "sweetalert2";
@@ -45,10 +46,91 @@ const Login = () => {
       setLoading(false);
     }
   };
+  // ----------------------
+  useEffect(() => {
+    async function handleCredentialResponse(response) {
+      console.log("Encoded JWT ID token: " + response.credential);
 
-  const goHome = () => {
-    navigate("/");
-  };
+      try {
+        setLoading(true);
+
+        const { data } = await axios.post("/auth/google-login", {
+          id_token: response.credential,
+        });
+
+        console.log("Google login response:", data);
+
+        // Store token and email
+        localStorage.setItem(
+          "access_token",
+          data.access_token || data.data.token
+        );
+        localStorage.setItem("login_email", data.email || data.data.user.email);
+
+        Swal.fire({
+          title: "Success!",
+          text: "Google login successful!",
+          icon: "success",
+          timer: 1500,
+          showConfirmButton: false,
+        });
+
+        navigate("/");
+      } catch (error) {
+        console.error("Google login error:", error);
+
+        const errorMessage =
+          error.response?.data?.message ||
+          "Google login failed! Please try again.";
+
+        Swal.fire({
+          title: "Error!",
+          text: errorMessage,
+          icon: "error",
+        });
+      } finally {
+        setLoading(false);
+      }
+    } // Initialize Google Sign-In when the component mounts
+    const initializeGoogleSignIn = () => {
+      console.log(
+        "VITE_GOOGLE_CLIENT_ID:",
+        import.meta.env.VITE_GOOGLE_CLIENT_ID
+      );
+
+      if (!import.meta.env.VITE_GOOGLE_CLIENT_ID) {
+        console.error(
+          "Google Client ID is not defined in environment variables"
+        );
+        return;
+      }
+
+      if (window.google && window.google.accounts) {
+        window.google.accounts.id.initialize({
+          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+          callback: handleCredentialResponse,
+        });
+
+        // Render button only if the element exists
+        const buttonDiv = document.getElementById("buttonDiv");
+        if (buttonDiv) {
+          window.google.accounts.id.renderButton(buttonDiv, {
+            theme: "outline",
+            size: "large",
+            width: "100%",
+            text: "signin_with",
+            shape: "rectangular",
+          });
+        }
+      } else {
+        // Retry after a short delay if Google script hasn't loaded yet
+        setTimeout(initializeGoogleSignIn, 100);
+      }
+    };
+
+    // Start initialization
+    initializeGoogleSignIn();
+  }, []);
 
   return (
     <div className="container-fluid bg-light text-dark min-vh-100 d-flex justify-content-center align-items-center">
@@ -120,17 +202,16 @@ const Login = () => {
                   "Sign in"
                 )}
               </button>
-
-              <button
-                type="button"
-                className="btn btn-outline-secondary"
-                onClick={goHome}
-                disabled={loading}
-              >
-                Go back home
-              </button>
             </div>
           </form>
+          <div className="text-center my-3">
+            <div className="d-flex align-items-center">
+              <hr className="flex-grow-1" />
+              <span className="px-3 text-muted small">OR</span>
+              <hr className="flex-grow-1" />
+            </div>
+          </div>
+          <div id="buttonDiv" className="mb-3 w-100"></div>
           <div className="text-center mt-4">
             <p className="mb-0">
               Don't have an account?{" "}
