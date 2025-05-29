@@ -13,6 +13,3 @@ router.get("/", (req, res) => {
 });
 
 module.exports = router;
-
-// router.use("/recommendations", recommendationRoutes); // ❌ Not needed - use /movies/recommendations
-// router.use("/users", userRoutes); // ❌ Not needed - use /auth routes

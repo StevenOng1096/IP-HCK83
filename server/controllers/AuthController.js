@@ -1,6 +1,9 @@
 const { User } = require("../models");
 const { generateToken } = require("../helpers/jwt");
 const { Op } = require("sequelize");
+const { OAuth2Client } = require("google-auth-library");
+const client = new OAuth2Client();
+require("dotenv").config();
 
 class AuthController {
   // Register a new user
@@ -197,12 +200,32 @@ class AuthController {
     }
   }
 
-  // Logout user (mainly for client-side token removal)
-  static async logout(req, res) {
-    res.status(200).json({
-      success: true,
-      message: "Logout successful",
-    });
+  // Google login
+  static async googleLogin(req, res) {
+    try {
+      const { id_token } = req.body;
+      const ticket = await client.verifyIdToken({
+        idToken: id_token,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+      const payload = ticket.getPayload();
+      const user = await User.findOne({ where: { email: payload.email } });
+
+      if (!user) {
+        const newUser = await User.create({
+          username: payload.name,
+          email: payload.email,
+          password: Math.random().toString(36).slice(-8),
+        });
+        const access_token = generateToken({ id: newUser.id });
+        return res.status(201).json({ access_token });
+      }
+
+      const access_token = generateToken({ id: user.id });
+      res.status(200).json({ access_token });
+    } catch (err) {
+      next(err);
+    }
   }
 }
 
