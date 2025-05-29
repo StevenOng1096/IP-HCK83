@@ -12,7 +12,6 @@ const Login = () => {
   const navigate = useNavigate();
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Login attempt with:", { email, password });
 
     setLoading(true);
 
@@ -22,7 +21,6 @@ const Login = () => {
         password,
       });
 
-      console.log(data);
       const token = data.data.token;
 
       localStorage.setItem("access_token", token);
@@ -49,16 +47,12 @@ const Login = () => {
   // ----------------------
   useEffect(() => {
     async function handleCredentialResponse(response) {
-      console.log("Encoded JWT ID token: " + response.credential);
-
       try {
         setLoading(true);
 
         const { data } = await axios.post("/auth/google-login", {
           id_token: response.credential,
         });
-
-        console.log("Google login response:", data);
 
         // Store token and email
         localStorage.setItem(

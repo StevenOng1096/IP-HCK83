@@ -1,4 +1,9 @@
+import React from "react";
+import { useNavigate } from "react-router";
+
 export default function MovieCard({ movie }) {
+  const navigate = useNavigate();
+
   // Base URL for TMDB images (you might want to move this to a config file)
   const TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500";
 
@@ -10,8 +15,13 @@ export default function MovieCard({ movie }) {
     ? new Date(movie.release_date).getFullYear()
     : "Unknown";
 
-  // Format rating
-  const rating = movie.vote_average ? movie.vote_average.toFixed(1) : "N/A";
+  // Get genres - handle both 'genres' and 'Genres' for compatibility
+  const movieGenres = movie.genres || movie.Genres || [];
+  const genreNames = movieGenres.map((genre) => genre.name).join(", ");
+
+  const handleViewDetails = () => {
+    navigate(`/moviedetails/${movie.id}`);
+  };
 
   return (
     <div className="col-lg-3 col-md-4 col-sm-6 mb-4">
@@ -35,19 +45,23 @@ export default function MovieCard({ movie }) {
               <i className="bi bi-calendar me-1"></i>
               Released: {releaseYear}
             </p>
-            <div className="d-flex justify-content-between align-items-center">
-              <span className="badge bg-warning text-dark">
-                <i className="bi bi-star-fill me-1"></i>
-                {rating}
-              </span>
-              {movie.Genres && movie.Genres.length > 0 && (
-                <small className="text-muted">{movie.Genres[0].name}</small>
-              )}
-            </div>
+
+            {/* Display genres */}
+            {movieGenres.length > 0 && (
+              <div className="mb-2">
+                <small className="text-muted d-block">
+                  <i className="bi bi-tags me-1"></i>
+                  {genreNames || "N/A"}
+                </small>
+              </div>
+            )}
           </div>
         </div>
         <div className="card-footer bg-transparent border-top-0">
-          <button className="btn btn-primary btn-sm w-100">
+          <button
+            className="btn btn-primary btn-sm w-100"
+            onClick={handleViewDetails}
+          >
             <i className="bi bi-info-circle me-1"></i>
             View Details
           </button>
