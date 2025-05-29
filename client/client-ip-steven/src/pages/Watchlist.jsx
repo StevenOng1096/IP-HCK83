@@ -14,7 +14,7 @@ const WatchlistCard = ({ movie, onRemove, onWatched, onFavorite }) => {
   const movieData = movie.movie || movie;
   const posterUrl = movieData.coverUrl;
   const releaseYear = movieData.release_date
-    ? new Date(movie.release_date).getFullYear()
+    ? new Date(movieData.release_date).getFullYear()
     : "Unknown";
   const movieGenres = movieData.genres || movieData.Genres || [];
   const genreNames = movieGenres.map((genre) => genre.name).join(", ");
