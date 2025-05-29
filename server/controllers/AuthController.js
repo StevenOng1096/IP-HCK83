@@ -19,6 +19,23 @@ class AuthController {
         });
       }
 
+      // Validate favorite_genres if provided
+      if (favorite_genres && Array.isArray(favorite_genres)) {
+        for (const genreId of favorite_genres) {
+          if (
+            typeof genreId !== "number" ||
+            !Number.isInteger(genreId) ||
+            genreId <= 0
+          ) {
+            return res.status(400).json({
+              success: false,
+              message:
+                "Invalid favorite_genres format. Must be an array of positive integers",
+            });
+          }
+        }
+      }
+
       // Check if user already exists
       const existingUser = await User.findOne({
         where: {
@@ -70,6 +87,16 @@ class AuthController {
         return res.status(400).json({
           success: false,
           message: "Username or email already exists",
+        });
+      }
+
+      if (
+        error.name === "SequelizeDatabaseError" &&
+        error.original?.code === "22P02"
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid data format provided",
         });
       }
 
@@ -151,7 +178,6 @@ class AuthController {
       });
     }
   }
-
   // Update user profile (protected route)
   static async updateProfile(req, res) {
     try {
@@ -197,34 +223,6 @@ class AuthController {
         success: false,
         message: "Internal server error while updating profile",
       });
-    }
-  }
-
-  // Google login
-  static async googleLogin(req, res) {
-    try {
-      const { id_token } = req.body;
-      const ticket = await client.verifyIdToken({
-        idToken: id_token,
-        audience: process.env.GOOGLE_CLIENT_ID,
-      });
-      const payload = ticket.getPayload();
-      const user = await User.findOne({ where: { email: payload.email } });
-
-      if (!user) {
-        const newUser = await User.create({
-          username: payload.name,
-          email: payload.email,
-          password: Math.random().toString(36).slice(-8),
-        });
-        const access_token = generateToken({ id: newUser.id });
-        return res.status(201).json({ access_token });
-      }
-
-      const access_token = generateToken({ id: user.id });
-      res.status(200).json({ access_token });
-    } catch (err) {
-      next(err);
     }
   }
 }

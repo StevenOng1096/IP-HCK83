@@ -8,7 +8,7 @@ const generateToken = (user) => {
       username: user.username,
       email: user.email,
     },
-    process.env.JWT_SECRET || "your-secret-key",
+    process.env.JWT_SECRET,
     { expiresIn: "24h" }
   );
 };
@@ -16,7 +16,7 @@ const generateToken = (user) => {
 // Verify JWT token
 const verifyToken = (token) => {
   try {
-    return jwt.verify(token, process.env.JWT_SECRET || "your-secret-key");
+    return jwt.verify(token, process.env.JWT_SECRET);
   } catch (error) {
     throw error;
   }

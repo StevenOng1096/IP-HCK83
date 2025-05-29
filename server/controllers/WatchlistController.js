@@ -63,12 +63,11 @@ class WatchlistController {
       });
     }
   }
-
   // Add movie to watchlist
   static async addToWatchlist(req, res) {
     try {
       const userId = req.user.id;
-      const { movieId, status = "want_to_watch" } = req.body;
+      const { movieId, status = "want" } = req.body;
 
       // Validation
       if (!movieId) {
@@ -140,6 +139,17 @@ class WatchlistController {
       });
     } catch (error) {
       console.error("Error adding to watchlist:", error);
+
+      if (
+        error.name === "SequelizeDatabaseError" &&
+        error.original?.code === "22P02"
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid data format provided",
+        });
+      }
+
       res.status(500).json({
         success: false,
         message: "Failed to add movie to watchlist",
@@ -163,7 +173,7 @@ class WatchlistController {
         });
       }
 
-      const validStatuses = ["want_to_watch", "watched", "favorite"];
+      const validStatuses = ["want", "watched", "favorite"];
       if (!validStatuses.includes(status)) {
         return res.status(400).json({
           success: false,
@@ -269,199 +279,6 @@ class WatchlistController {
       res.status(500).json({
         success: false,
         message: "Failed to remove movie from watchlist",
-        error: error.message,
-      });
-    }
-  }
-
-  // Get watchlist statistics
-  static async getWatchlistStats(req, res) {
-    try {
-      const userId = req.user.id;
-
-      // Get counts by status
-      const stats = await Watchlist.findAll({
-        where: { UserId: userId },
-        attributes: [
-          "status",
-          [
-            require("sequelize").fn("COUNT", require("sequelize").col("id")),
-            "count",
-          ],
-        ],
-        group: ["status"],
-        raw: true,
-      });
-
-      // Get total count
-      const totalCount = await Watchlist.count({
-        where: { UserId: userId },
-      });
-
-      // Get favorite genres from watchlist
-      const favoriteGenres = await Genre.findAll({
-        attributes: [
-          "id",
-          "name",
-          [
-            require("sequelize").fn(
-              "COUNT",
-              require("sequelize").col("MovieGenres.GenreId")
-            ),
-            "count",
-          ],
-        ],
-        include: [
-          {
-            model: Movie,
-            as: "movies",
-            through: { attributes: [] },
-            include: [
-              {
-                model: Watchlist,
-                as: "watchlists",
-                where: { UserId: userId },
-                attributes: [],
-              },
-            ],
-            attributes: [],
-          },
-        ],
-        group: ["Genre.id", "Genre.name"],
-        order: [[require("sequelize").literal("count"), "DESC"]],
-        limit: 5,
-        raw: true,
-      });
-
-      // Format the response
-      const formattedStats = {
-        want_to_watch: 0,
-        watched: 0,
-        favorite: 0,
-      };
-
-      stats.forEach((stat) => {
-        formattedStats[stat.status] = parseInt(stat.count);
-      });
-
-      res.status(200).json({
-        success: true,
-        message: "Watchlist statistics retrieved successfully",
-        data: {
-          totalMovies: totalCount,
-          byStatus: formattedStats,
-          topGenres: favoriteGenres.map((genre) => ({
-            id: genre.id,
-            name: genre.name,
-            movieCount: parseInt(genre.count),
-          })),
-        },
-      });
-    } catch (error) {
-      console.error("Error fetching watchlist stats:", error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to fetch watchlist statistics",
-        error: error.message,
-      });
-    }
-  }
-
-  // Get movies by specific status
-  static async getMoviesByStatus(req, res) {
-    try {
-      const userId = req.user.id;
-      const { status } = req.params;
-      const { page = 1, limit = 20 } = req.query;
-      const offset = (page - 1) * limit;
-
-      const validStatuses = ["want_to_watch", "watched", "favorite"];
-      if (!validStatuses.includes(status)) {
-        return res.status(400).json({
-          success: false,
-          message: `Invalid status. Must be one of: ${validStatuses.join(
-            ", "
-          )}`,
-        });
-      }
-
-      const movies = await Watchlist.findAndCountAll({
-        where: {
-          UserId: userId,
-          status,
-        },
-        include: [
-          {
-            model: Movie,
-            as: "movie",
-            attributes: ["id", "title", "overview", "coverUrl", "release_date"],
-            include: [
-              {
-                model: Genre,
-                as: "genres",
-                through: { attributes: [] },
-                attributes: ["id", "name"],
-              },
-            ],
-          },
-        ],
-        order: [["createdAt", "DESC"]],
-        limit: parseInt(limit),
-        offset: parseInt(offset),
-      });
-
-      res.status(200).json({
-        success: true,
-        message: `${status.replace("_", " ")} movies retrieved successfully`,
-        data: {
-          movies: movies.rows,
-          status,
-          pagination: {
-            currentPage: parseInt(page),
-            totalPages: Math.ceil(movies.count / limit),
-            totalItems: movies.count,
-            hasNextPage: page * limit < movies.count,
-            hasPrevPage: page > 1,
-          },
-        },
-      });
-    } catch (error) {
-      console.error("Error fetching movies by status:", error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to fetch movies by status",
-        error: error.message,
-      });
-    }
-  }
-
-  // Check if movie is in user's watchlist
-  static async checkMovieInWatchlist(req, res) {
-    try {
-      const userId = req.user.id;
-      const { movieId } = req.params;
-
-      const watchlistEntry = await Watchlist.findOne({
-        where: {
-          UserId: userId,
-          MovieId: movieId,
-        },
-        attributes: ["id", "status", "createdAt"],
-      });
-
-      res.status(200).json({
-        success: true,
-        message: "Watchlist status checked successfully",
-        data: {
-          inWatchlist: !!watchlistEntry,
-          entry: watchlistEntry || null,
-        },
-      });
-    } catch (error) {
-      console.error("Error checking watchlist status:", error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to check watchlist status",
         error: error.message,
       });
     }

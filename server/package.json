@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "app.js",
   "scripts": {
-    "test": "jest",
+    "test": "jest --verbose --detectOpenHandles --coverage",
     "test:watch": "jest --watch",
     "db:create": "sequelize-cli db:create",
     "db:migrate": "sequelize-cli db:migrate",
