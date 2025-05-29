@@ -1,4 +1,5 @@
-import { Outlet, Navigate } from "react-router";
+import { Navigate, Outlet } from "react-router";
+import Navbar from "../components/Navbar";
 
 export default function MainLayout() {
   const token = localStorage.access_token;
@@ -7,5 +8,10 @@ export default function MainLayout() {
     return <Navigate to="/login" />;
   }
 
-  return <Outlet />;
+  return (
+    <>
+      <Navbar />
+      <Outlet />
+    </>
+  );
 }

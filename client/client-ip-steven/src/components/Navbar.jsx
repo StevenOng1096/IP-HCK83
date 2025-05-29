@@ -4,38 +4,25 @@ import { Link, useNavigate } from "react-router";
 const Navbar = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState("popularity");
-  const [releaseYear, setReleaseYear] = useState("");
 
-  // Check if user is logged in (you can replace this with your auth logic)
-  const isLoggedIn = localStorage.getItem("token");
-  const username = localStorage.getItem("username");
+  // Check if user is logged in using the correct token key
+  const isLoggedIn = localStorage.getItem("access_token");
+  const username = localStorage.getItem("username") || "User";
 
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      // Navigate to search results with query parameters
-      const searchParams = new URLSearchParams({
-        q: searchQuery,
-        sort: sortBy,
-        ...(releaseYear && { year: releaseYear }),
-      });
-      navigate(`/search?${searchParams.toString()}`);
+      // Navigate to home with search query
+      navigate(`/?search=${encodeURIComponent(searchQuery)}`);
+      setSearchQuery("");
     }
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("username");
-    navigate("/");
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("login_email");
+    navigate("/login");
   };
-
-  // Generate year options (current year down to 1900)
-  const currentYear = new Date().getFullYear();
-  const yearOptions = [];
-  for (let year = currentYear; year >= 1900; year--) {
-    yearOptions.push(year);
-  }
 
   return (
     <nav className="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow">
@@ -64,7 +51,7 @@ const Navbar = () => {
           {/* Left side navigation */}
           <ul className="navbar-nav me-auto">
             <li className="nav-item">
-              <Link className="nav-link active" to="/">
+              <Link className="nav-link" to="/">
                 <i className="bi bi-house-door me-1"></i>
                 Home
               </Link>
@@ -72,9 +59,9 @@ const Navbar = () => {
             {isLoggedIn && (
               <>
                 <li className="nav-item">
-                  <Link className="nav-link" to="/movies">
-                    <i className="bi bi-collection-play me-1"></i>
-                    Movies
+                  <Link className="nav-link" to="/profile">
+                    <i className="bi bi-person me-1"></i>
+                    Profile
                   </Link>
                 </li>
                 <li className="nav-item">
@@ -83,67 +70,32 @@ const Navbar = () => {
                     My Watchlist
                   </Link>
                 </li>
-                <li className="nav-item">
-                  <Link className="nav-link" to="/recommendations">
-                    <i className="bi bi-stars me-1"></i>
-                    Recommendations
-                  </Link>
-                </li>
               </>
             )}
           </ul>
 
           {/* Center - Search Form */}
-          <form
-            className="d-flex mx-3 flex-grow-1"
-            onSubmit={handleSearch}
-            style={{ maxWidth: "500px" }}
-          >
-            <div className="input-group">
-              <input
-                className="form-control"
-                type="search"
-                placeholder="Search movies..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                aria-label="Search movies"
-              />
-
-              {/* Sort Dropdown */}
-              <select
-                className="form-select"
-                style={{ maxWidth: "140px" }}
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                aria-label="Sort by"
-              >
-                <option value="popularity">Popular</option>
-                <option value="vote_average">Rating</option>
-                <option value="release_date">Newest</option>
-                <option value="title">A-Z</option>
-              </select>
-
-              {/* Year Filter */}
-              <select
-                className="form-select"
-                style={{ maxWidth: "100px" }}
-                value={releaseYear}
-                onChange={(e) => setReleaseYear(e.target.value)}
-                aria-label="Filter by year"
-              >
-                <option value="">All Years</option>
-                {yearOptions.slice(0, 30).map((year) => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
-              </select>
-
-              <button className="btn btn-primary" type="submit">
-                <i className="bi bi-search">Go</i>
-              </button>
-            </div>
-          </form>
+          {isLoggedIn && (
+            <form
+              className="d-flex mx-3 flex-grow-1"
+              onSubmit={handleSearch}
+              style={{ maxWidth: "400px" }}
+            >
+              <div className="input-group">
+                <input
+                  className="form-control"
+                  type="search"
+                  placeholder="Search movies..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  aria-label="Search movies"
+                />
+                <button className="btn btn-primary" type="submit">
+                  <i className="bi bi-search">Search</i>
+                </button>
+              </div>
+            </form>
+          )}
 
           {/* Right side - User actions */}
           <ul className="navbar-nav">
@@ -157,7 +109,7 @@ const Navbar = () => {
                   aria-expanded="false"
                 >
                   <i className="bi bi-person-circle me-1"></i>
-                  {username || "User"}
+                  {username}
                 </a>
                 <ul className="dropdown-menu dropdown-menu-end">
                   <li>
@@ -178,7 +130,7 @@ const Navbar = () => {
                   <li>
                     <button className="dropdown-item" onClick={handleLogout}>
                       <i className="bi bi-box-arrow-right me-2"></i>
-                      Sign Out
+                      Logout
                     </button>
                   </li>
                 </ul>
