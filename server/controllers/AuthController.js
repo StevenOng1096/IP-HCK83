@@ -171,7 +171,6 @@ class AuthController {
         },
       });
     } catch (error) {
-      console.error("Profile error:", error);
       res.status(500).json({
         success: false,
         message: "Internal server error while fetching profile",
