@@ -227,8 +227,6 @@ class MovieController {
 
       const parsedOutput = JSON.parse(generation);
 
-      console.log("Generation:", parsedOutput);
-
       const movies = dataMovies.filter((movie) =>
         parsedOutput.includes(movie.id)
       );
